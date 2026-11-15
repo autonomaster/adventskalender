@@ -1,22 +1,33 @@
 # Carl & Mariana Adventskalender
 
 A two-person advent calendar app. Carl and Mariana each have it on their phone.
-For every day from 1 to 24 December, each of them puts a surprise behind a door
-for the other: a photo, a video, any other file, a message, a link, or a mix.
-The recipient can open a door only once its day has started; afterwards every
+For every day from 1 to 24 December, each of them fills a pouch on the other's
+Christmas tree: a photo, a video, any other file, a message, a link, or a mix.
+The recipient can open a pouch only once its day has started; afterwards every
 received surprise stays in the gallery.
+
+The look is a risograph print: a few overprinted inks (green, blue, red, pink,
+yellow) on warm paper, with halftone shading, grain and slight misregistration.
+The tree, pouches and star are drawn in code (`lib/ui`), no image assets.
 
 ## How it works
 
-- **Calendar**: 24 doors with surprises from the partner. Green doors are still
-  locked, a red door with a gift is ready to open, a heart means already
-  opened, an hourglass means the day has started but the partner has not
-  filled it yet. Today's door has a gold frame.
-- **Prepare**: the 24 doors you fill for your partner. You can prepare
-  surprises ahead of time and change or delete them any time. A
-  "read" icon shows that your partner has opened the door.
-- **Gallery**: every received surprise whose door has opened, newest first,
+- **My tree**: 24 pouches hang on your tree, scattered over the branches, with
+  door 24 right under the star. Pale pouches are still locked, bright red ones
+  with sparkles are ready to open, open pouches have been opened, and dashed
+  outlines mean the day has started but your partner has not filled it yet.
+  Today's pouch has a yellow halo. Tapping a ready pouch pops it up as a big
+  open pouch with the surprise rising out of it.
+- **Partner's tree** ("Prepare" tab): the tree you fill for your partner.
+  Dashed pouches with a plus are empty; tap one to add or change its surprise.
+  Filled pouches are tied shut, and they show as open once your partner has
+  opened them.
+- **Gallery**: every received surprise whose pouch has opened, newest first,
   across all years.
+- **Links** show a preview card with thumbnail and title (YouTube, Spotify,
+  Vimeo and SoundCloud via oEmbed, other sites via their OpenGraph tags). In
+  the browser build most sites block this (CORS), so previews there fall back
+  to the plain link; on the phones they work.
 
 Doors open at local midnight on the recipient's phone. The server
 (`supabase/schema.sql`) also refuses to hand out a surprise or its file before
@@ -93,8 +104,10 @@ Layout:
 
 - `lib/core/models`: calendar rules (`advent.dart`) and surprise data
 - `lib/core/data`: repository interfaces with Supabase and in-memory versions
-- `lib/core/services`: photo/video/file picking
-- `lib/features`: sign-in, calendar, prepare/editor, gallery, viewer
+- `lib/core/services`: photo/video/file picking, link previews
+- `lib/ui`: riso palette and theme, tree and pouch painters, pouch layout
+- `lib/features`: sign-in, my tree, partner's tree and editor, gallery,
+  surprise popup
 - `supabase/schema.sql`: tables, row-level security, storage bucket and policies
 
 Not built yet: push notifications when a new door opens or a partner fills a

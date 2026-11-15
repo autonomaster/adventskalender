@@ -1,14 +1,17 @@
 /// Calendar rules for the advent season: doors 1-24 in December.
 const int adventDoorCount = 24;
 
-/// Door positions on the calendar grid, shuffled like a paper calendar.
+/// Door numbers in tree slot order (top to bottom), shuffled like a paper
+/// calendar. Door 24, Christmas Eve, hangs right under the star.
 const List<int> adventDoorLayout = [
-  7, 15, 2, 21, //
-  12, 1, 18, 9,
-  24, 5, 14, 20,
-  3, 11, 23, 8,
-  17, 6, 19, 13,
-  10, 22, 4, 16,
+  24, //
+  7, 15,
+  2, 21, 12,
+  1, 18, 9, 5,
+  14, 20, 3, 11,
+  23, 8, 17,
+  6, 19, 13, 10,
+  22, 4, 16,
 ];
 
 DateTime dateOnly(DateTime time) => DateTime(time.year, time.month, time.day);

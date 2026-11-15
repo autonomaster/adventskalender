@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/data/auth_repository.dart';
+import '../../ui/advent_tree.dart';
 
 class SignInPage extends StatefulWidget {
   const SignInPage({super.key, required this.auth, this.hint});
@@ -61,10 +62,12 @@ class _SignInPageState extends State<SignInPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Icon(
-                      Icons.card_giftcard,
-                      size: 56,
-                      color: theme.colorScheme.primary,
+                    const Center(
+                      child: SizedBox(
+                        width: 110,
+                        height: 110 * treeAspect,
+                        child: CustomPaint(painter: TreePainter()),
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Text(

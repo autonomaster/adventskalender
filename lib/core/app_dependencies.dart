@@ -4,6 +4,7 @@ import 'data/auth_repository.dart';
 import 'data/memory_repositories.dart';
 import 'data/supabase_repositories.dart';
 import 'data/surprise_repository.dart';
+import 'services/link_preview_service.dart';
 import 'services/media_picker_service.dart';
 
 const _supabaseUrl = String.fromEnvironment('SUPABASE_URL');
@@ -16,6 +17,7 @@ class AppDependencies {
     required this.auth,
     required this.surprises,
     required this.media,
+    required this.linkPreviews,
     required this.now,
     this.signInHint,
   });
@@ -23,6 +25,7 @@ class AppDependencies {
   final AuthRepository auth;
   final SurpriseRepository surprises;
   final MediaPickerService media;
+  final LinkPreviewService linkPreviews;
   final DateTime Function() now;
 
   /// Shown on the sign-in screen, e.g. demo credentials.
@@ -49,17 +52,22 @@ class AppDependencies {
       auth: SupabaseAuthRepository(client),
       surprises: SupabaseSurpriseRepository(client),
       media: MediaPickerService(),
+      linkPreviews: LinkPreviewService(),
       now: DateTime.now,
     );
   }
 
   /// In-memory backend with two demo accounts; nothing leaves the device.
-  static AppDependencies demo({required DateTime Function() now}) {
+  static AppDependencies demo({
+    required DateTime Function() now,
+    LinkPreviewService? linkPreviews,
+  }) {
     final backend = MemoryBackend.demo(now: now);
     return AppDependencies(
       auth: MemoryAuthRepository(backend),
       surprises: MemorySurpriseRepository(backend),
       media: MediaPickerService(),
+      linkPreviews: linkPreviews ?? LinkPreviewService(),
       now: now,
       signInHint:
           'Demo mode: sign in as carl@demo or mariana@demo, password "advent". '
