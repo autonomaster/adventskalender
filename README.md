@@ -130,7 +130,10 @@ Then publish the folder `build/web` on any static host with HTTPS, for example
 2. Open <https://app.netlify.com/drop> and drag the `build/web` folder onto it.
 3. Under **Project configuration → Change project name** pick a name; the
    site is then at `https://<name>.netlify.app`.
-4. For updates, rebuild and drag `build/web` onto the project's **Deploys**
+4. Click **Make public**. New Netlify projects start private, and on the free
+   plan a private project is visible only to the account owner, so Mariana
+   would get a Netlify login page instead of the calendar.
+5. For updates, rebuild and drag `build/web` onto the project's **Deploys**
    page.
 
 On the iPhone, open the address in Safari, sign in, then **Share → Add to Home
