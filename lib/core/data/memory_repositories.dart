@@ -18,10 +18,13 @@ class MemoryAccount {
 }
 
 /// Shared state for the in-memory auth and surprise repositories. Used by
-/// tests and by demo mode (`--dart-define=ADVENT_DEMO=true`).
+/// tests and by demo mode (`--dart-define=ADVENT_DEMO=true`). Mirrors the
+/// partner rules of supabase/migrations/003_partners.sql.
 class MemoryBackend {
-  MemoryBackend({required this.accounts, required this.now});
+  MemoryBackend({required List<MemoryAccount> accounts, required this.now})
+    : accounts = [...accounts];
 
+  /// Carl and Mariana, already linked.
   factory MemoryBackend.demo({required DateTime Function() now}) {
     return MemoryBackend(
       now: now,
@@ -37,13 +40,19 @@ class MemoryBackend {
           profile: Profile(id: 'mariana', displayName: 'Mariana'),
         ),
       ],
-    );
+    )..partners.addAll({'carl': 'mariana', 'mariana': 'carl'});
   }
 
   final List<MemoryAccount> accounts;
   final DateTime Function() now;
   final List<Surprise> surprises = [];
   final Map<String, PickedMedia> files = {};
+
+  /// Person id → partner id, always symmetric.
+  final Map<String, String> partners = {};
+
+  /// Inviter id → invited email.
+  final Map<String, String> invitations = {};
   final StreamController<bool> _signedIn = StreamController.broadcast();
   String? currentUserId;
   int _nextId = 1;
@@ -54,6 +63,13 @@ class MemoryBackend {
     currentUserId = id;
     _signedIn.add(id != null);
   }
+
+  MemoryAccount accountById(String id) =>
+      accounts.firstWhere((account) => account.profile.id == id);
+
+  MemoryAccount? accountByEmail(String email) => accounts
+      .where((account) => account.email == email.trim().toLowerCase())
+      .firstOrNull;
 }
 
 class MemoryAuthRepository implements AuthRepository {
@@ -67,34 +83,110 @@ class MemoryAuthRepository implements AuthRepository {
   @override
   Stream<bool> get signedInChanges => _backend._signedIn.stream;
 
+  String get _myId {
+    final id = _backend.currentUserId;
+    if (id == null) {
+      throw const AppFailure('You are signed out.');
+    }
+    return id;
+  }
+
   @override
   Future<void> signIn({required String email, required String password}) async {
-    final account = _backend.accounts
-        .where(
-          (account) =>
-              account.email == email.trim().toLowerCase() &&
-              account.password == password,
-        )
-        .firstOrNull;
-    if (account == null) {
+    final account = _backend.accountByEmail(email);
+    if (account == null || account.password != password) {
       throw const AppFailure('Invalid login credentials');
     }
     _backend.setCurrentUser(account.profile.id);
   }
 
   @override
+  Future<bool> signUp({
+    required String email,
+    required String password,
+    required String displayName,
+  }) async {
+    if (_backend.accountByEmail(email) != null) {
+      throw const AppFailure('User already registered');
+    }
+    final account = MemoryAccount(
+      email: email.trim().toLowerCase(),
+      password: password,
+      profile: Profile(id: _backend.nextId(), displayName: displayName.trim()),
+    );
+    _backend.accounts.add(account);
+    _backend.setCurrentUser(account.profile.id);
+    return true;
+  }
+
+  @override
   Future<void> signOut() async => _backend.setCurrentUser(null);
 
   @override
-  Future<Couple> loadCouple() async {
-    final myId = _backend.currentUserId;
-    if (myId == null) {
-      throw const AppFailure('You are signed out.');
+  Future<PartnerStatus> loadPartnerStatus() async {
+    final me = _backend.accountById(_myId);
+    final partnerId = _backend.partners[_myId];
+    if (partnerId != null) {
+      return PartnerLinked(
+        Couple(
+          me: me.profile,
+          partner: _backend.accountById(partnerId).profile,
+        ),
+      );
     }
-    return coupleFromProfiles(
-      myId,
-      _backend.accounts.map((account) => account.profile),
+    return PartnerMissing(
+      me: me.profile,
+      invitedEmail: _backend.invitations[_myId],
+      incoming: [
+        for (final MapEntry(key: inviterId, value: email)
+            in _backend.invitations.entries)
+          if (email == me.email && !_backend.partners.containsKey(inviterId))
+            Invitation(
+              name: _backend.accountById(inviterId).profile.displayName,
+              email: _backend.accountById(inviterId).email,
+            ),
+      ],
     );
+  }
+
+  @override
+  Future<InviteResult> invitePartner(String email) async {
+    final myId = _myId;
+    final target = email.trim().toLowerCase();
+    if (!target.contains('@')) {
+      throw const AppFailure('Enter a valid email address.');
+    }
+    final me = _backend.accountById(myId);
+    if (target == me.email) {
+      throw const AppFailure('That is your own email address.');
+    }
+    if (_backend.partners.containsKey(myId)) {
+      throw const AppFailure('You are already connected with a partner.');
+    }
+    final other = _backend.accountByEmail(target);
+    if (other != null &&
+        _backend.invitations[other.profile.id] == me.email &&
+        !_backend.partners.containsKey(other.profile.id)) {
+      _backend.partners
+        ..[myId] = other.profile.id
+        ..[other.profile.id] = myId;
+      _backend.invitations
+        ..remove(myId)
+        ..remove(other.profile.id);
+      return InviteResult.linked;
+    }
+    _backend.invitations[myId] = target;
+    return InviteResult.invited;
+  }
+
+  @override
+  Future<void> declineInvitation(String inviterEmail) async {
+    final me = _backend.accountById(_myId);
+    final inviter = _backend.accountByEmail(inviterEmail);
+    if (inviter != null &&
+        _backend.invitations[inviter.profile.id] == me.email) {
+      _backend.invitations.remove(inviter.profile.id);
+    }
   }
 }
 
@@ -120,6 +212,9 @@ class MemorySurpriseRepository implements SurpriseRepository {
     final senderId = _backend.currentUserId;
     if (senderId == null) {
       throw const AppFailure('You are signed out.');
+    }
+    if (draft.recipientId != _backend.partners[senderId]) {
+      throw const AppFailure('You can only fill your partner\'s tree.');
     }
     final media = draft.newMedia;
     if (media != null && media.bytes.length > maxUploadBytes) {

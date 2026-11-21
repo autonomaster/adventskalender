@@ -22,17 +22,42 @@ Future<void> signOut(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+Future<void> signUp(WidgetTester tester, String name, String email) async {
+  await tester.tap(find.text('New here? Create an account'));
+  await tester.pumpAndSettle();
+  await tester.enterText(find.widgetWithText(TextField, 'Your name'), name);
+  await tester.enterText(find.widgetWithText(TextField, 'Email'), email);
+  await tester.enterText(find.widgetWithText(TextField, 'Password'), 'secret1');
+  await tester.tap(find.widgetWithText(FilledButton, 'Create account'));
+  await tester.pumpAndSettle();
+}
+
+Future<void> connectWith(WidgetTester tester, String email) async {
+  await tester.enterText(
+    find.widgetWithText(TextField, "Partner's email"),
+    email,
+  );
+  await tester.tap(find.widgetWithText(FilledButton, 'Connect'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.widgetWithText(FilledButton, 'Connect').last);
+  await tester.pumpAndSettle();
+}
+
+Future<void> setUpView(WidgetTester tester) async {
+  tester.view.physicalSize = const Size(1080, 2400);
+  tester.view.devicePixelRatio = 2.5;
+  addTearDown(tester.view.reset);
+  // Sparkling pouches wiggle forever unless animations are reduced.
+  tester.platformDispatcher.accessibilityFeaturesTestValue =
+      const FakeAccessibilityFeatures(disableAnimations: true);
+  addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+}
+
 void main() {
   testWidgets('Carl fills a door and Mariana receives it on its day', (
     tester,
   ) async {
-    tester.view.physicalSize = const Size(1080, 2400);
-    tester.view.devicePixelRatio = 2.5;
-    addTearDown(tester.view.reset);
-    // Sparkling pouches wiggle forever unless animations are reduced.
-    tester.platformDispatcher.accessibilityFeaturesTestValue =
-        const FakeAccessibilityFeatures(disableAnimations: true);
-    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+    await setUpView(tester);
 
     final dependencies = AppDependencies.demo(
       clock: CalendarClock(system: () => DateTime(2026, 12, 3, 9)),
@@ -102,12 +127,7 @@ void main() {
   });
 
   testWidgets('a test date from the backend opens doors early', (tester) async {
-    tester.view.physicalSize = const Size(1080, 2400);
-    tester.view.devicePixelRatio = 2.5;
-    addTearDown(tester.view.reset);
-    tester.platformDispatcher.accessibilityFeaturesTestValue =
-        const FakeAccessibilityFeatures(disableAnimations: true);
-    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+    await setUpView(tester);
 
     // Real date in November; the backend says to pretend it is 3 December.
     DateTime? backendTestDate = DateTime(2026, 12, 3);
@@ -150,5 +170,73 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('Test date'), findsNothing);
     expect(find.byTooltip('Door 4 opens on 4 December'), findsOneWidget);
+  });
+
+  testWidgets('new people link up only when both name each other', (
+    tester,
+  ) async {
+    await setUpView(tester);
+    await tester.pumpWidget(
+      AdventApp(
+        dependencies: AppDependencies.demo(
+          clock: CalendarClock(system: () => DateTime(2026, 12, 3, 9)),
+          linkPreviews: LinkPreviewService(
+            client: MockClient((_) async => http.Response('', 404)),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Anna signs up and invites Ben, who has no account yet.
+    await signUp(tester, 'Anna', 'anna@example.com');
+    expect(find.text('Connect with your partner'), findsOneWidget);
+    await connectWith(tester, 'ben@example.com');
+    expect(find.text('Waiting for ben@example.com'), findsOneWidget);
+    await tester.tap(find.text('Sign out'));
+    await tester.pumpAndSettle();
+
+    // Cara tries to claim Carl, who is already linked with Mariana.
+    await signUp(tester, 'Cara', 'cara@example.com');
+    await connectWith(tester, 'carl@demo');
+    expect(find.text('Waiting for carl@demo'), findsOneWidget);
+    await tester.tap(find.text('Sign out'));
+    await tester.pumpAndSettle();
+
+    // Ben signs up, sees Anna's invitation and accepts it.
+    await signUp(tester, 'Ben', 'ben@example.com');
+    expect(find.text('Anna wants to connect'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Accept'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Connect').last);
+    await tester.pumpAndSettle();
+    expect(find.text('My tree'), findsOneWidget);
+    await tester.tap(find.text('Prepare'));
+    await tester.pumpAndSettle();
+    expect(find.text("Anna's tree"), findsOneWidget);
+    await signOut(tester);
+
+    // Carl is unaffected: still linked with Mariana, no invitation shown.
+    await signIn(tester, 'carl@demo');
+    expect(find.text('My tree'), findsOneWidget);
+    await tester.tap(find.text('Prepare'));
+    await tester.pumpAndSettle();
+    expect(find.text("Mariana's tree"), findsOneWidget);
+    await signOut(tester);
+
+    // Anna lands on her tree with Ben.
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Email'),
+      'anna@example.com',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Password'),
+      'secret1',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Sign in'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Prepare'));
+    await tester.pumpAndSettle();
+    expect(find.text("Ben's tree"), findsOneWidget);
   });
 }
