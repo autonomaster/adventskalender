@@ -192,7 +192,7 @@ class _SurpriseEditorPageState extends State<SurpriseEditorPage> {
       if (mounted) {
         setState(() {
           _busy = false;
-          _error = error is AppFailure ? error.message : '$failure: $error';
+          _error = userMessage(error, failure);
         });
       }
     }

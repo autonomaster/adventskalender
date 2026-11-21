@@ -103,7 +103,7 @@ class _PartnerSetupPageState extends State<PartnerSetupPage>
       widget.onChanged();
     } on Object catch (error) {
       if (mounted) {
-        setState(() => _error = error is AppFailure ? error.message : '$error');
+        setState(() => _error = userMessage(error, 'That did not work'));
       }
     } finally {
       if (mounted) {

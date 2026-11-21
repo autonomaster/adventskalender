@@ -133,7 +133,7 @@ class _PartnerLoaderState extends State<_PartnerLoader> {
         if (snapshot.hasError) {
           final error = snapshot.error;
           return _Message(
-            text: error is AppFailure ? error.message : '$error',
+            text: userMessage(error!, 'Loading failed'),
             actions: [
               OutlinedButton(
                 onPressed: _reload,

@@ -10,9 +10,7 @@ class LoadError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final detail = error is AppFailure
-        ? (error as AppFailure).message
-        : '$error';
+    final detail = userMessage(error, 'Could not load surprises');
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -21,10 +19,7 @@ class LoadError extends StatelessWidget {
           children: [
             const Icon(Icons.cloud_off, size: 40),
             const SizedBox(height: 12),
-            Text(
-              'Could not load surprises.\n$detail',
-              textAlign: TextAlign.center,
-            ),
+            Text(detail, textAlign: TextAlign.center),
             const SizedBox(height: 12),
             OutlinedButton(onPressed: onRetry, child: const Text('Try again')),
           ],

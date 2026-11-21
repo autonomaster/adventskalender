@@ -78,7 +78,7 @@ class _SignInPageState extends State<SignInPage> {
     } on Object catch (error) {
       if (mounted) {
         setState(() {
-          _error = error is AppFailure ? error.message : 'Failed: $error';
+          _error = userMessage(error, 'That did not work');
         });
       }
     } finally {
