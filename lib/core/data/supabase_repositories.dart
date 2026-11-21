@@ -29,30 +29,107 @@ class SupabaseAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<bool> signUp({
+    required String email,
+    required String password,
+    required String displayName,
+  }) async {
+    try {
+      final response = await _client.auth.signUp(
+        email: email.trim(),
+        password: password,
+        data: {'display_name': displayName.trim()},
+      );
+      return response.session != null;
+    } on AuthException catch (error) {
+      throw AppFailure(error.message);
+    }
+  }
+
+  @override
   Future<void> signOut() => _client.auth.signOut();
 
   @override
-  Future<Couple> loadCouple() async {
+  Future<PartnerStatus> loadPartnerStatus() async {
     final myId = _client.auth.currentUser?.id;
     if (myId == null) {
       throw const AppFailure('You are signed out.');
     }
-    final rows = await _client.from('profiles').select();
-    return coupleFromProfiles(
-      myId,
-      rows.map(
-        (row) => Profile(
-          id: row['id'] as String,
-          displayName: row['display_name'] as String,
-        ),
-      ),
+    // Row level security returns only my profile and my partner's.
+    final rows = await _client
+        .from('profiles')
+        .select('id, display_name, partner_id');
+    Profile profile(Map<String, dynamic> row) => Profile(
+      id: row['id'] as String,
+      displayName: row['display_name'] as String,
+    );
+    final mine = rows.where((row) => row['id'] == myId).firstOrNull;
+    if (mine == null) {
+      throw const AppFailure(
+        'Your profile is missing. Run the files in supabase/migrations.',
+      );
+    }
+    final partnerId = mine['partner_id'] as String?;
+    if (partnerId != null) {
+      final partner = rows.where((row) => row['id'] == partnerId).firstOrNull;
+      if (partner == null) {
+        throw const AppFailure('Your partner\'s profile could not be loaded.');
+      }
+      return PartnerLinked(
+        Couple(me: profile(mine), partner: profile(partner)),
+      );
+    }
+    final invitation = await _client
+        .from('invitations')
+        .select('invitee_email')
+        .maybeSingle();
+    final incoming = await _client.rpc<List<dynamic>>('incoming_invitations');
+    return PartnerMissing(
+      me: profile(mine),
+      invitedEmail: invitation?['invitee_email'] as String?,
+      incoming: [
+        for (final row in incoming.cast<Map<String, dynamic>>())
+          Invitation(
+            name: row['inviter_name'] as String,
+            email: row['inviter_email'] as String,
+          ),
+      ],
+    );
+  }
+
+  @override
+  Future<InviteResult> invitePartner(String email) async {
+    try {
+      final result = await _client.rpc<String>(
+        'invite_partner',
+        params: {'partner_email': email},
+      );
+      return result == 'linked' ? InviteResult.linked : InviteResult.invited;
+    } on PostgrestException catch (error) {
+      throw AppFailure(error.message);
+    }
+  }
+
+  @override
+  Future<void> declineInvitation(String inviterEmail) async {
+    await _client.rpc<void>(
+      'decline_invitation',
+      params: {'inviter_email': inviterEmail},
     );
   }
 }
 
-/// The test date from `app_config` (see supabase/migrations), or null.
+/// The signed-in person's test date (see supabase/migrations), or null.
 Future<DateTime?> loadTestDate(SupabaseClient client) async {
-  final row = await client.from('app_config').select('test_date').maybeSingle();
+  final myId = client.auth.currentUser?.id;
+  if (myId == null) {
+    return null;
+  }
+  final row = await client
+      .from('profiles')
+      .select('test_date')
+      .eq('id', myId)
+      .maybeSingle();
   final value = row?['test_date'] as String?;
   return value == null ? null : DateTime.parse(value);
 }

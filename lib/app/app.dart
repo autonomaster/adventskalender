@@ -4,6 +4,7 @@ import '../core/app_dependencies.dart';
 import '../core/data/auth_repository.dart';
 import '../core/models/advent.dart';
 import '../core/models/surprise.dart';
+import '../features/auth/partner_setup_page.dart';
 import '../features/auth/sign_in_page.dart';
 import '../features/calendar/calendar_page.dart';
 import '../features/compose/compose_page.dart';
@@ -96,34 +97,38 @@ class _AuthGate extends StatelessWidget {
         if (snapshot.data != true) {
           return SignInPage(auth: auth, hint: dependencies.signInHint);
         }
-        return _CoupleLoader(dependencies: dependencies);
+        return _PartnerLoader(dependencies: dependencies);
       },
     );
   }
 }
 
-class _CoupleLoader extends StatefulWidget {
-  const _CoupleLoader({required this.dependencies});
+class _PartnerLoader extends StatefulWidget {
+  const _PartnerLoader({required this.dependencies});
 
   final AppDependencies dependencies;
 
   @override
-  State<_CoupleLoader> createState() => _CoupleLoaderState();
+  State<_PartnerLoader> createState() => _PartnerLoaderState();
 }
 
-class _CoupleLoaderState extends State<_CoupleLoader> {
-  late Future<Couple> _couple;
+class _PartnerLoaderState extends State<_PartnerLoader> {
+  late Future<PartnerStatus> _status = _load();
 
-  @override
-  void initState() {
-    super.initState();
-    _couple = widget.dependencies.auth.loadCouple();
+  Future<PartnerStatus> _load() => widget.dependencies.auth.loadPartnerStatus();
+
+  void _reload() {
+    if (mounted) {
+      setState(() {
+        _status = _load();
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<Couple>(
-      future: _couple,
+    return FutureBuilder<PartnerStatus>(
+      future: _status,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           final error = snapshot.error;
@@ -131,9 +136,7 @@ class _CoupleLoaderState extends State<_CoupleLoader> {
             text: error is AppFailure ? error.message : '$error',
             actions: [
               OutlinedButton(
-                onPressed: () => setState(() {
-                  _couple = widget.dependencies.auth.loadCouple();
-                }),
+                onPressed: _reload,
                 child: const Text('Try again'),
               ),
               TextButton(
@@ -143,15 +146,20 @@ class _CoupleLoaderState extends State<_CoupleLoader> {
             ],
           );
         }
-        if (!snapshot.hasData) {
-          return const Scaffold(
+        return switch (snapshot.data) {
+          null => const Scaffold(
             body: Center(child: CircularProgressIndicator()),
-          );
-        }
-        return _HomeShell(
-          dependencies: widget.dependencies,
-          couple: snapshot.data!,
-        );
+          ),
+          PartnerLinked(:final couple) => _HomeShell(
+            dependencies: widget.dependencies,
+            couple: couple,
+          ),
+          final PartnerMissing missing => PartnerSetupPage(
+            auth: widget.dependencies.auth,
+            status: missing,
+            onChanged: _reload,
+          ),
+        };
       },
     );
   }

@@ -34,23 +34,6 @@ void main() {
     expect(mediaKindForName('README'), MediaKind.file);
   });
 
-  test('a couple needs exactly one partner', () {
-    const carl = Profile(id: 'c', displayName: 'Carl');
-    const mariana = Profile(id: 'm', displayName: 'Mariana');
-    const extra = Profile(id: 'x', displayName: 'X');
-
-    expect(coupleFromProfiles('c', [carl, mariana]).partner, mariana);
-    expect(() => coupleFromProfiles('c', [carl]), throwsA(isA<AppFailure>()));
-    expect(
-      () => coupleFromProfiles('c', [carl, mariana, extra]),
-      throwsA(isA<AppFailure>()),
-    );
-    expect(
-      () => coupleFromProfiles('c', [mariana]),
-      throwsA(isA<AppFailure>()),
-    );
-  });
-
   group('memory repositories', () {
     late DateTime now;
     late MemoryBackend backend;

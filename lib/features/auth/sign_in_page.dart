@@ -14,31 +14,62 @@ class SignInPage extends StatefulWidget {
 }
 
 class _SignInPageState extends State<SignInPage> {
+  final _name = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
+  bool _creating = false;
   bool _busy = false;
   String? _error;
+  String? _info;
 
   @override
   void dispose() {
+    _name.dispose();
     _email.dispose();
     _password.dispose();
     super.dispose();
   }
 
-  Future<void> _signIn() async {
+  void _toggleMode() {
+    setState(() {
+      _creating = !_creating;
+      _error = null;
+      _info = null;
+    });
+  }
+
+  Future<void> _submit() async {
+    if (_creating && _name.text.trim().isEmpty) {
+      setState(() => _error = 'Enter your name.');
+      return;
+    }
     setState(() {
       _busy = true;
       _error = null;
+      _info = null;
     });
     try {
-      await widget.auth.signIn(email: _email.text, password: _password.text);
+      if (_creating) {
+        final signedIn = await widget.auth.signUp(
+          email: _email.text,
+          password: _password.text,
+          displayName: _name.text,
+        );
+        if (!signedIn && mounted) {
+          setState(() {
+            _creating = false;
+            _info =
+                'Almost done: open the link in the email we just sent to '
+                '${_email.text.trim()}, then sign in here.';
+          });
+        }
+      } else {
+        await widget.auth.signIn(email: _email.text, password: _password.text);
+      }
     } on Object catch (error) {
       if (mounted) {
         setState(() {
-          _error = error is AppFailure
-              ? error.message
-              : 'Sign-in failed: $error';
+          _error = error is AppFailure ? error.message : 'Failed: $error';
         });
       }
     } finally {
@@ -76,6 +107,19 @@ class _SignInPageState extends State<SignInPage> {
                       style: theme.textTheme.headlineSmall,
                     ),
                     const SizedBox(height: 32),
+                    if (_creating) ...[
+                      TextField(
+                        controller: _name,
+                        enabled: !_busy,
+                        textCapitalization: TextCapitalization.words,
+                        autofillHints: const [AutofillHints.givenName],
+                        decoration: const InputDecoration(
+                          labelText: 'Your name',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                     TextField(
                       controller: _email,
                       enabled: !_busy,
@@ -91,8 +135,12 @@ class _SignInPageState extends State<SignInPage> {
                       controller: _password,
                       enabled: !_busy,
                       obscureText: true,
-                      autofillHints: const [AutofillHints.password],
-                      onSubmitted: (_) => _signIn(),
+                      autofillHints: [
+                        _creating
+                            ? AutofillHints.newPassword
+                            : AutofillHints.password,
+                      ],
+                      onSubmitted: (_) => _submit(),
                       decoration: const InputDecoration(
                         labelText: 'Password',
                         border: OutlineInputBorder(),
@@ -105,10 +153,29 @@ class _SignInPageState extends State<SignInPage> {
                         style: TextStyle(color: theme.colorScheme.error),
                       ),
                     ],
+                    if (_info != null) ...[
+                      const SizedBox(height: 12),
+                      Text(_info!),
+                    ],
                     const SizedBox(height: 20),
                     FilledButton(
-                      onPressed: _busy ? null : _signIn,
-                      child: Text(_busy ? 'Signing in…' : 'Sign in'),
+                      onPressed: _busy ? null : _submit,
+                      child: Text(
+                        _busy
+                            ? 'Please wait…'
+                            : _creating
+                            ? 'Create account'
+                            : 'Sign in',
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: _busy ? null : _toggleMode,
+                      child: Text(
+                        _creating
+                            ? 'I already have an account'
+                            : 'New here? Create an account',
+                      ),
                     ),
                     if (widget.hint != null) ...[
                       const SizedBox(height: 20),

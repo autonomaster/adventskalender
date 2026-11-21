@@ -1,10 +1,10 @@
 # Carl & Mariana Adventskalender
 
-A two-person advent calendar app. Carl and Mariana each have it on their phone.
-For every day from 1 to 24 December, each of them fills a pouch on the other's
-Christmas tree: a photo, a video, any other file, a message, a link, or a mix.
-The recipient can open a pouch only once its day has started; afterwards every
-received surprise stays in the gallery.
+A two-person advent calendar app. Each person has it on their phone and is
+connected with exactly one partner. For every day from 1 to 24 December, each
+of them fills a pouch on the other's Christmas tree: a photo, a video, any other
+file, a message, a link, or a mix. The recipient can open a pouch only once its
+day has started; afterwards every received surprise stays in the gallery.
 
 The look is a risograph print: a few overprinted inks (green, blue, red, pink,
 yellow) on warm paper, with halftone shading, grain and slight misregistration.
@@ -37,22 +37,60 @@ Data lives in [Supabase](https://supabase.com): sign-in, database, and a private
 file bucket. Files are only accessible to the sender and, once the door is open,
 the recipient.
 
+## Accounts and partners
+
+Anyone can create an account in the app (name, email, password). After the
+first sign-in, people without a partner see **Connect with your partner**:
+
+1. Enter your partner's email address. If they have an account and already
+   invited you, the two trees are connected right away.
+2. Otherwise they get a pending invitation: once they have an account with
+   exactly that address, they see "*You* wants to connect" with **Accept** /
+   **Decline**, or they can enter your address themselves.
+3. **Send invitation email** opens your own mail app with a prefilled
+   invitation including the app link (the website address, or `APP_URL` from
+   `supabase.json` in the Android app).
+
+Rules, enforced by the database (`supabase/migrations/003_partners.sql`), not
+just the app:
+
+- Two people are only connected once **both** have named each other, so nobody
+  can attach themselves to someone else's tree.
+- Everyone has at most one partner; nobody can change or remove the link from
+  the app (only in the dashboard).
+- People only see their own and their partner's profile and surprises, can only
+  fill their partner's tree, and can only upload files once connected.
+
+Carl and Mariana were connected by the migration; nothing changes for them.
+
+Automatic invitation emails sent by the server would need a custom email
+provider plus a Supabase Edge Function; the mail-app button avoids both.
+
 ## Supabase setup (once)
 
 1. Create a free project at <https://supabase.com/dashboard> (choose an EU region).
 2. **SQL Editor → New query**: paste each file in
    [`supabase/migrations`](supabase/migrations) and run it, in order
-   (`001_…`, then `002_…`). Later files are changes; run each new one once.
-3. **Authentication → Users → Add user → Create new user**: create one account
-   for Carl and one for Mariana (email + password, tick *Auto Confirm User*).
-   The display name is taken from the part of the email before `@`; change it in
-   **Table Editor → profiles** if needed.
-4. **Authentication → Sign In / Providers**: turn off *Allow new users to sign
-   up*, so nobody else can create an account.
-5. **Project Settings → API Keys**: copy the publishable key. The project URL is
+   (`001_…`, `002_…`, `003_…`). Later files are changes; run each new one once.
+3. **Authentication → Sign In / Providers → Email**: turn on *Allow new users to
+   sign up*. Keep **Confirm email** on: it proves people own their address, so
+   nobody can register someone else's email and accept invitations meant for
+   them.
+4. Confirmation emails need your own email provider: Supabase's built-in
+   sender only delivers to members of your Supabase team and at most 2 emails
+   an hour. Create a free account at an SMTP provider (e.g.
+   [Resend](https://resend.com) or [Brevo](https://www.brevo.com)) and enter
+   its SMTP details under **Authentication → Emails → SMTP Settings**.
+5. **Authentication → URL Configuration → Site URL**: the website address
+   (e.g. `https://<name>.netlify.app`). The link in the confirmation email
+   leads there.
+6. **Project Settings → API Keys**: copy the publishable key. The project URL is
    `https://<project-ref>.supabase.co` (shown under **Project Settings → Data
    API**), not the dashboard address. Copy `supabase.example.json` to
-   `supabase.json` and fill in both values. `supabase.json` is ignored by git.
+   `supabase.json` and fill in the values. `supabase.json` is ignored by git.
+
+Accounts can also be created by hand under **Authentication → Users → Add user**
+(tick *Auto Confirm User*); they connect in the app like everyone else.
 
 Free-tier notes: files can be at most 50 MB (videos recorded in the app are
 limited to 2 minutes), total storage is 1 GB, there are no automatic backups,
@@ -62,20 +100,26 @@ year, with all data.
 
 ### Test date
 
-To try the calendar before December, pretend "today" is another day, for both
-phones at once and without a new app build. In **SQL Editor**:
+To try the calendar before December, pretend "today" is another day for one
+couple, without a new app build. In **SQL Editor** (set it for both partners):
 
 ```sql
-update public.app_config set test_date = '2026-12-05';  -- pretend
-update public.app_config set test_date = null;          -- back to the real date
+-- pretend
+update public.profiles set test_date = '2026-12-05'
+where id in (select id from auth.users
+             where email in ('carl@example.com', 'mariana@example.com'));
+
+-- back to the real date
+update public.profiles set test_date = null where test_date is not null;
 ```
 
-(or edit the single row in **Table Editor → app_config**). The server unlocks
-doors up to the test date, and the app shows a yellow "Test date" bar. The app
-picks the change up when it is reopened or brought back to the foreground, or
-on pull-to-refresh. Set it back to `null` before 1 December, and delete test
-surprises (**Table Editor → surprises**; their files are in **Storage →
-surprises**): a test date late in December reveals every door up to that day.
+(or edit `test_date` in **Table Editor → profiles**). Each person's server-side
+unlocking follows their own test date, so other couples are unaffected, and the
+app shows a yellow "Test date" bar. The app picks the change up when it is
+reopened or brought back to the foreground, or on pull-to-refresh. Set it back
+to `null` before 1 December, and delete test surprises (**Table Editor →
+surprises**; their files are in **Storage → surprises**): a test date late in
+December reveals every door up to that day.
 
 ## Running
 
