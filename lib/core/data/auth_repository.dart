@@ -10,6 +10,12 @@ class AppFailure implements Exception {
   String toString() => message;
 }
 
+/// Text to show for [error]: the [AppFailure] message, otherwise a plain
+/// hint instead of a technical exception (usually a lost connection).
+String userMessage(Object error, String failed) => error is AppFailure
+    ? error.message
+    : '$failed. Check your internet connection and try again.';
+
 /// Sign-in was refused because the email address is not confirmed yet.
 class EmailNotConfirmed extends AppFailure {
   const EmailNotConfirmed()

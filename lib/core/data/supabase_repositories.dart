@@ -43,6 +43,15 @@ class SupabaseAuthRepository implements AuthRepository {
       password: password,
       data: {'display_name': displayName.trim()},
     );
+    // Supabase answers like a fresh sign-up for addresses that already have
+    // an account (so nobody can probe addresses), but without identities.
+    if (response.session == null &&
+        (response.user?.identities?.isEmpty ?? false)) {
+      throw const AppFailure(
+        'An account with this email address already exists. Sign in, or use '
+        '"Forgot password?".',
+      );
+    }
     return response.session != null;
   });
 
