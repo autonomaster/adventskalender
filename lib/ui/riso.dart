@@ -65,18 +65,18 @@ void paintHalftone(
 }) {
   const buckets = 5;
   final groups = List.generate(buckets, (_) => <double>[]);
-  final diagonal = bounds.longestSide * 1.5;
+  // A 45° screen with dot distance [spacing] is the checkerboard lattice
+  // `center + (i, j)·d` with `i + j` even and `d = spacing / √2`.
+  final d = spacing * math.sqrt1_2;
   final center = bounds.center;
-  const cos45 = math.sqrt1_2;
-  for (var u = -diagonal; u <= diagonal; u += spacing) {
-    for (var v = -diagonal; v <= diagonal; v += spacing) {
-      final point = Offset(
-        center.dx + (u - v) * cos45,
-        center.dy + (u + v) * cos45,
-      );
-      if (!bounds.contains(point)) {
-        continue;
-      }
+  final jMin = ((bounds.top - center.dy) / d).ceil();
+  final jMax = ((bounds.bottom - center.dy) / d).floor();
+  final iMin = ((bounds.left - center.dx) / d).ceil();
+  final iMax = ((bounds.right - center.dx) / d).floor();
+  for (var j = jMin; j <= jMax; j++) {
+    final y = center.dy + j * d;
+    for (var i = iMin + (iMin + j).abs() % 2; i <= iMax; i += 2) {
+      final point = Offset(center.dx + i * d, y);
       final value = intensity(point).clamp(0.0, 1.0);
       if (value < 0.08) {
         continue;

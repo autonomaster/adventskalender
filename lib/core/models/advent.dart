@@ -32,4 +32,21 @@ DateTime adventDate(int year, int door) {
 bool isDoorUnlocked(DateTime day, DateTime now) =>
     !dateOnly(now).isBefore(dateOnly(day));
 
-String formatAdventDay(DateTime day) => '${day.day} December ${day.year}';
+/// "5 December 2026".
+String formatDate(DateTime day) =>
+    '${day.day} ${_months[day.month - 1]} ${day.year}';
+
+const _months = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];

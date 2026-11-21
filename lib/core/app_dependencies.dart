@@ -4,6 +4,7 @@ import 'data/auth_repository.dart';
 import 'data/memory_repositories.dart';
 import 'data/supabase_repositories.dart';
 import 'data/surprise_repository.dart';
+import 'services/calendar_clock.dart';
 import 'services/link_preview_service.dart';
 import 'services/media_picker_service.dart';
 
@@ -18,7 +19,7 @@ class AppDependencies {
     required this.surprises,
     required this.media,
     required this.linkPreviews,
-    required this.now,
+    required this.clock,
     this.signInHint,
   });
 
@@ -26,7 +27,7 @@ class AppDependencies {
   final SurpriseRepository surprises;
   final MediaPickerService media;
   final LinkPreviewService linkPreviews;
-  final DateTime Function() now;
+  final CalendarClock clock;
 
   /// Shown on the sign-in screen, e.g. demo credentials.
   final String? signInHint;
@@ -34,9 +35,9 @@ class AppDependencies {
   static Future<AppDependencies> create() async {
     if (_demo) {
       return demo(
-        now: _demoToday.isEmpty
-            ? DateTime.now
-            : () => DateTime.parse(_demoToday),
+        clock: CalendarClock(
+          testDate: _demoToday.isEmpty ? null : DateTime.parse(_demoToday),
+        ),
       );
     }
     if (_supabaseUrl.isEmpty || _supabaseKey.isEmpty) {
@@ -53,22 +54,22 @@ class AppDependencies {
       surprises: SupabaseSurpriseRepository(client),
       media: MediaPickerService(),
       linkPreviews: LinkPreviewService(),
-      now: DateTime.now,
+      clock: CalendarClock(loadTestDate: () => loadTestDate(client)),
     );
   }
 
   /// In-memory backend with two demo accounts; nothing leaves the device.
   static AppDependencies demo({
-    required DateTime Function() now,
+    required CalendarClock clock,
     LinkPreviewService? linkPreviews,
   }) {
-    final backend = MemoryBackend.demo(now: now);
+    final backend = MemoryBackend.demo(now: clock.now);
     return AppDependencies(
       auth: MemoryAuthRepository(backend),
       surprises: MemorySurpriseRepository(backend),
       media: MediaPickerService(),
       linkPreviews: linkPreviews ?? LinkPreviewService(),
-      now: now,
+      clock: clock,
       signInHint:
           'Demo mode: sign in as carl@demo or mariana@demo, password "advent". '
           'Data is lost when the app closes.',

@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../core/app_dependencies.dart';
 import '../core/data/auth_repository.dart';
+import '../core/models/advent.dart';
 import '../core/models/surprise.dart';
 import '../features/auth/sign_in_page.dart';
 import '../features/calendar/calendar_page.dart';
 import '../features/compose/compose_page.dart';
 import '../features/gallery/gallery_page.dart';
+import '../ui/riso.dart';
 import '../ui/riso_theme.dart';
 
 class AdventApp extends StatefulWidget {
@@ -168,17 +170,19 @@ class _HomeShell extends StatefulWidget {
 class _HomeShellState extends State<_HomeShell> with WidgetsBindingObserver {
   int _selectedIndex = 0;
 
-  /// Bumped to reload received surprises (door opened, app resumed).
+  /// Bumped to reload all pages (door opened, app resumed, test date changed).
   int _revision = 0;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    widget.dependencies.clock.addListener(_onChanged);
   }
 
   @override
   void dispose() {
+    widget.dependencies.clock.removeListener(_onChanged);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -205,9 +209,28 @@ class _HomeShellState extends State<_HomeShell> with WidgetsBindingObserver {
       "${couple.partner.displayName}'s tree",
       'Gallery',
     ];
+    final testDate = widget.dependencies.clock.testDate;
     return Scaffold(
       appBar: AppBar(
         title: Text(titles[_selectedIndex]),
+        bottom: testDate == null
+            ? null
+            : PreferredSize(
+                preferredSize: const Size.fromHeight(30),
+                child: Container(
+                  height: 30,
+                  width: double.infinity,
+                  color: Riso.yellow,
+                  alignment: Alignment.center,
+                  child: Text(
+                    'Test date: ${formatDate(testDate)}',
+                    style: const TextStyle(
+                      color: Riso.ink,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
         actions: [
           PopupMenuButton<void>(
             tooltip: 'Account',

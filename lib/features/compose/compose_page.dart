@@ -32,8 +32,10 @@ class _ComposePageState extends State<ComposePage> {
     _sent = _load();
   }
 
-  Future<List<Surprise>> _load() =>
-      widget.dependencies.surprises.sentBy(widget.couple.me.id);
+  Future<List<Surprise>> _load() async {
+    await widget.dependencies.clock.refresh();
+    return widget.dependencies.surprises.sentBy(widget.couple.me.id);
+  }
 
   Future<void> _reload() async {
     final next = _load();
@@ -61,7 +63,7 @@ class _ComposePageState extends State<ComposePage> {
 
   @override
   Widget build(BuildContext context) {
-    final now = widget.dependencies.now();
+    final now = widget.dependencies.clock.now();
     final year = adventSeasonYear(now);
     final partner = widget.couple.partner.displayName;
     return FutureBuilder<List<Surprise>>(

@@ -240,7 +240,7 @@ class _SurpriseEditorPageState extends State<SurpriseEditorPage> {
                   children: [
                     Text(
                       '$partner can open this on '
-                      '${formatAdventDay(widget.day)}.',
+                      '${formatDate(widget.day)}.',
                       style: theme.textTheme.bodyMedium,
                     ),
                     if (widget.existing?.isOpened ?? false)

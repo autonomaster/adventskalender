@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'rasterized_paint.dart';
 import 'riso.dart';
 
 /// How a pouch on the tree looks.
@@ -544,13 +545,14 @@ class _PouchButtonState extends State<PouchButton>
                     (_wiggle.isAnimating ? (_wiggle.value - 0.5) * 0.22 : 0),
                 child: child,
               ),
-              child: CustomPaint(
+              child: RasterizedPaint(
+                // Strings, sparkles and the highlight reach outside the box.
+                overflow: 0.25,
                 painter: PouchPainter(
                   look: widget.look,
                   number: widget.number,
                   highlighted: widget.highlighted,
                 ),
-                child: const SizedBox.expand(),
               ),
             ),
           ),

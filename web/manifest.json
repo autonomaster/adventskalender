@@ -1,11 +1,11 @@
 {
-    "name": "adventskalender",
-    "short_name": "adventskalender",
+    "name": "Carl & Mariana Adventskalender",
+    "short_name": "Adventskalender",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "Carl and Mariana Adventskalender",
+    "background_color": "#F4EDE0",
+    "theme_color": "#F4EDE0",
+    "description": "Carl & Mariana Adventskalender",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

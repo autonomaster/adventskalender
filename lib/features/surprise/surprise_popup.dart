@@ -7,6 +7,7 @@ import '../../core/app_dependencies.dart';
 import '../../core/models/advent.dart';
 import '../../core/models/surprise.dart';
 import '../../ui/pouch.dart';
+import '../../ui/rasterized_paint.dart';
 import '../../ui/riso.dart';
 import '../../ui/riso_theme.dart';
 import 'link_preview_card.dart';
@@ -132,7 +133,8 @@ class _SurprisePopupState extends State<_SurprisePopup> {
                     right: 0,
                     bottom: 0,
                     height: pouchHeight,
-                    child: CustomPaint(
+                    child: RasterizedPaint(
+                      overflow: 0.05,
                       painter: OpenPouchPainter(
                         part: OpenPouchPart.back,
                         number: door,
@@ -152,7 +154,9 @@ class _SurprisePopupState extends State<_SurprisePopup> {
                           begin: const Offset(0, 0.7),
                           end: Offset.zero,
                         ).animate(rise),
-                        child: _card(context, bottomPadding: tucked + 6),
+                        child: RepaintBoundary(
+                          child: _card(context, bottomPadding: tucked + 6),
+                        ),
                       ),
                     ),
                   ),
@@ -162,7 +166,8 @@ class _SurprisePopupState extends State<_SurprisePopup> {
                     bottom: 0,
                     height: pouchHeight,
                     child: IgnorePointer(
-                      child: CustomPaint(
+                      child: RasterizedPaint(
+                        overflow: 0.05,
                         painter: OpenPouchPainter(
                           part: OpenPouchPart.front,
                           number: door,
@@ -210,7 +215,7 @@ class _SurprisePopupState extends State<_SurprisePopup> {
                         ),
                       ),
                       Text(
-                        formatAdventDay(surprise.day),
+                        formatDate(surprise.day),
                         style: theme.textTheme.bodySmall,
                       ),
                     ],

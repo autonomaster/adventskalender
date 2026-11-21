@@ -36,8 +36,10 @@ class _GalleryPageState extends State<GalleryPage> {
     _received = _load();
   }
 
-  Future<List<Surprise>> _load() =>
-      widget.dependencies.surprises.receivedBy(widget.couple.me.id);
+  Future<List<Surprise>> _load() async {
+    await widget.dependencies.clock.refresh();
+    return widget.dependencies.surprises.receivedBy(widget.couple.me.id);
+  }
 
   Future<void> _reload() async {
     final next = _load();
@@ -61,7 +63,7 @@ class _GalleryPageState extends State<GalleryPage> {
 
   @override
   Widget build(BuildContext context) {
-    final now = widget.dependencies.now();
+    final now = widget.dependencies.clock.now();
     return FutureBuilder<List<Surprise>>(
       future: _received,
       builder: (context, snapshot) {

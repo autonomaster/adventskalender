@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../core/models/advent.dart';
 import 'pouch.dart';
+import 'rasterized_paint.dart';
 import 'riso.dart';
 
 /// The tree box is [treeAspect] times taller than wide.
@@ -120,9 +121,7 @@ class AdventTree extends StatelessWidget {
               clipBehavior: Clip.none,
               children: [
                 const Positioned.fill(
-                  child: RepaintBoundary(
-                    child: CustomPaint(painter: TreePainter()),
-                  ),
+                  child: RasterizedPaint(painter: TreePainter()),
                 ),
                 for (var i = 0; i < pouchSlots.length; i++)
                   _pouch(
