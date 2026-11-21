@@ -27,7 +27,10 @@ Future<void> signUp(WidgetTester tester, String name, String email) async {
   await tester.pumpAndSettle();
   await tester.enterText(find.widgetWithText(TextField, 'Your name'), name);
   await tester.enterText(find.widgetWithText(TextField, 'Email'), email);
-  await tester.enterText(find.widgetWithText(TextField, 'Password'), 'secret1');
+  await tester.enterText(
+    find.widgetWithText(TextField, 'Password'),
+    'secret12',
+  );
   await tester.tap(find.widgetWithText(FilledButton, 'Create account'));
   await tester.pumpAndSettle();
 }
@@ -231,7 +234,7 @@ void main() {
     );
     await tester.enterText(
       find.widgetWithText(TextField, 'Password'),
-      'secret1',
+      'secret12',
     );
     await tester.tap(find.widgetWithText(FilledButton, 'Sign in'));
     await tester.pumpAndSettle();

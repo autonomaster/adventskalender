@@ -17,30 +17,72 @@ class SupabaseAuthRepository implements AuthRepository {
       _client.auth.onAuthStateChange.map((state) => state.session != null);
 
   @override
-  Future<void> signIn({required String email, required String password}) async {
-    try {
-      await _client.auth.signInWithPassword(
-        email: email.trim(),
-        password: password,
-      );
-    } on AuthException catch (error) {
-      throw AppFailure(error.message);
-    }
-  }
+  Future<void> signIn({required String email, required String password}) =>
+      _auth(() async {
+        try {
+          await _client.auth.signInWithPassword(
+            email: email.trim(),
+            password: password,
+          );
+        } on AuthException catch (error) {
+          if (error.code == ErrorCode.emailNotConfirmed.code) {
+            throw const EmailNotConfirmed();
+          }
+          rethrow;
+        }
+      });
 
   @override
   Future<bool> signUp({
     required String email,
     required String password,
     required String displayName,
-  }) async {
-    try {
-      final response = await _client.auth.signUp(
-        email: email.trim(),
-        password: password,
-        data: {'display_name': displayName.trim()},
+  }) => _auth(() async {
+    final response = await _client.auth.signUp(
+      email: email.trim(),
+      password: password,
+      data: {'display_name': displayName.trim()},
+    );
+    return response.session != null;
+  });
+
+  @override
+  Future<void> confirmSignUp({required String email, required String code}) =>
+      _auth(
+        () => _client.auth.verifyOTP(
+          email: email.trim(),
+          token: code.trim(),
+          type: OtpType.signup,
+        ),
       );
-      return response.session != null;
+
+  @override
+  Future<void> resendSignUpCode(String email) => _auth(
+    () => _client.auth.resend(email: email.trim(), type: OtpType.signup),
+  );
+
+  @override
+  Future<void> sendPasswordResetCode(String email) =>
+      _auth(() => _client.auth.resetPasswordForEmail(email.trim()));
+
+  @override
+  Future<void> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) => _auth(() async {
+    await _client.auth.verifyOTP(
+      email: email.trim(),
+      token: code.trim(),
+      type: OtpType.recovery,
+    );
+    await _client.auth.updateUser(UserAttributes(password: newPassword));
+  });
+
+  /// Runs an auth call and turns its errors into [AppFailure]s.
+  static Future<T> _auth<T>(Future<T> Function() call) async {
+    try {
+      return await call();
     } on AuthException catch (error) {
       throw AppFailure(error.message);
     }

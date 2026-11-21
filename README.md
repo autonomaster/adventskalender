@@ -39,8 +39,15 @@ the recipient.
 
 ## Accounts and partners
 
-Anyone can create an account in the app (name, email, password). After the
-first sign-in, people without a partner see **Connect with your partner**:
+Anyone can create an account in the app (name, email, password of at least 8
+characters). Supabase emails a 6-digit code (German and English) that is
+typed into the app to confirm the address; **Send a new code** resends it.
+**Forgot password?** works the same way: a code by email plus the new
+password. Codes work identically in the Android app and on the website, no
+links to open on the right device.
+
+After the first sign-in, people without a partner see **Connect with your
+partner**:
 
 1. Enter your partner's email address. If they have an account and already
    invited you, the two trees are connected right away.
@@ -63,6 +70,19 @@ just the app:
 
 Carl and Mariana were connected by the migration; nothing changes for them.
 
+### Account limit
+
+`supabase/migrations/004_signup_limit.sql` refuses new sign-ups once 50
+accounts exist ("Anmeldungen sind gerade voll / Sign-ups are full right now").
+Accounts count once confirmed, or while their confirmation is pending for less
+than a day. Let more people in with:
+
+```sql
+update public.signup_settings set max_accounts = 100;
+```
+
+Check the current number with `select count(*) from auth.users;`.
+
 Automatic invitation emails sent by the server would need a custom email
 provider plus a Supabase Edge Function; the mail-app button avoids both.
 
@@ -71,20 +91,22 @@ provider plus a Supabase Edge Function; the mail-app button avoids both.
 1. Create a free project at <https://supabase.com/dashboard> (choose an EU region).
 2. **SQL Editor → New query**: paste each file in
    [`supabase/migrations`](supabase/migrations) and run it, in order
-   (`001_…`, `002_…`, `003_…`). Later files are changes; run each new one once.
-3. **Authentication → Sign In / Providers → Email**: turn on *Allow new users to
-   sign up*. Keep **Confirm email** on: it proves people own their address, so
-   nobody can register someone else's email and accept invitations meant for
-   them.
-4. Confirmation emails need your own email provider: Supabase's built-in
-   sender only delivers to members of your Supabase team and at most 2 emails
-   an hour. Create a free account at an SMTP provider (e.g.
-   [Resend](https://resend.com) or [Brevo](https://www.brevo.com)) and enter
-   its SMTP details under **Authentication → Emails → SMTP Settings**.
-5. **Authentication → URL Configuration → Site URL**: the website address
-   (e.g. `https://<name>.netlify.app`). The link in the confirmation email
-   leads there.
-6. **Project Settings → API Keys**: copy the publishable key. The project URL is
+   (`001_…` to `004_…`). Later files are changes; run each new one once.
+3. **Authentication → Auth Hooks → Before User Created**: Postgres function
+   `public.hook_limit_signups` (the account limit).
+4. Email sending: Supabase's built-in sender only delivers to members of your
+   Supabase team and at most 2 emails an hour. This project sends through
+   Gmail (**Authentication → Emails → SMTP Settings**: host `smtp.gmail.com`,
+   port 465, the Gmail address as user and sender, a Google
+   [app password](https://myaccount.google.com/apppasswords) as password,
+   sender name "Adventskalender"). Gmail allows about 500 emails a day.
+5. **Authentication → Emails → Templates**: *Confirm signup* and *Reset
+   password* show `{{ .Token }}` (the code) instead of a link.
+6. **Authentication → Sign In / Providers → Email**: *Allow new users to sign
+   up* on, **Confirm email** on (it proves people own their address, so nobody
+   can register someone else's email and accept invitations meant for them),
+   minimum password length 8, email OTP length 6.
+7. **Project Settings → API Keys**: copy the publishable key. The project URL is
    `https://<project-ref>.supabase.co` (shown under **Project Settings → Data
    API**), not the dashboard address. Copy `supabase.example.json` to
    `supabase.json` and fill in the values. `supabase.json` is ignored by git.
