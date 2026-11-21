@@ -10,6 +10,12 @@ class AppFailure implements Exception {
   String toString() => message;
 }
 
+/// Sign-in was refused because the email address is not confirmed yet.
+class EmailNotConfirmed extends AppFailure {
+  const EmailNotConfirmed()
+    : super('Please confirm your email address with the code we sent you.');
+}
+
 /// Someone who named the signed-in person as their partner.
 class Invitation {
   const Invitation({required this.name, required this.email});
@@ -53,15 +59,31 @@ abstract class AuthRepository {
   /// Emits whenever the user signs in or out.
   Stream<bool> get signedInChanges;
 
-  /// Throws [AppFailure] for wrong credentials.
+  /// Throws [EmailNotConfirmed] before the email address is confirmed, and
+  /// [AppFailure] for wrong credentials.
   Future<void> signIn({required String email, required String password});
 
   /// Creates an account. Returns false when the email address has to be
-  /// confirmed (link in an email) before signing in.
+  /// confirmed with the emailed code ([confirmSignUp]) before signing in.
   Future<bool> signUp({
     required String email,
     required String password,
     required String displayName,
+  });
+
+  /// Confirms the email address with the emailed code and signs in.
+  Future<void> confirmSignUp({required String email, required String code});
+
+  Future<void> resendSignUpCode(String email);
+
+  /// Emails a code for [resetPassword].
+  Future<void> sendPasswordResetCode(String email);
+
+  /// Sets a new password with the emailed code and signs in.
+  Future<void> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
   });
 
   Future<void> signOut();

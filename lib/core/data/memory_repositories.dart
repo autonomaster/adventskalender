@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import '../models/advent.dart';
 import '../models/surprise.dart';
@@ -57,6 +58,26 @@ class MemoryBackend {
   String? currentUserId;
   int _nextId = 1;
 
+  /// When true, sign-ups must be confirmed with an emailed code, like on
+  /// Supabase. Demo mode leaves it off.
+  bool requireEmailConfirmation = false;
+
+  /// Emails that still need confirming.
+  final Set<String> unconfirmed = {};
+
+  /// Codes "emailed" so far, newest last: (email, code).
+  final List<(String, String)> sentCodes = [];
+  final _random = Random();
+
+  String sendCode(String email) {
+    final code = (_random.nextInt(900000) + 100000).toString();
+    sentCodes.add((email, code));
+    return code;
+  }
+
+  bool checkCode(String email, String code) =>
+      sentCodes.where((sent) => sent.$1 == email).lastOrNull?.$2 == code.trim();
+
   String nextId() => 'm${_nextId++}';
 
   void setCurrentUser(String? id) {
@@ -97,6 +118,9 @@ class MemoryAuthRepository implements AuthRepository {
     if (account == null || account.password != password) {
       throw const AppFailure('Invalid login credentials');
     }
+    if (_backend.unconfirmed.contains(account.email)) {
+      throw const EmailNotConfirmed();
+    }
     _backend.setCurrentUser(account.profile.id);
   }
 
@@ -115,8 +139,62 @@ class MemoryAuthRepository implements AuthRepository {
       profile: Profile(id: _backend.nextId(), displayName: displayName.trim()),
     );
     _backend.accounts.add(account);
+    if (_backend.requireEmailConfirmation) {
+      _backend.unconfirmed.add(account.email);
+      _backend.sendCode(account.email);
+      return false;
+    }
     _backend.setCurrentUser(account.profile.id);
     return true;
+  }
+
+  @override
+  Future<void> confirmSignUp({
+    required String email,
+    required String code,
+  }) async {
+    final account = _backend.accountByEmail(email);
+    if (account == null || !_backend.checkCode(account.email, code)) {
+      throw const AppFailure('Token has expired or is invalid');
+    }
+    _backend.unconfirmed.remove(account.email);
+    _backend.setCurrentUser(account.profile.id);
+  }
+
+  @override
+  Future<void> resendSignUpCode(String email) async {
+    final account = _backend.accountByEmail(email);
+    if (account != null && _backend.unconfirmed.contains(account.email)) {
+      _backend.sendCode(account.email);
+    }
+  }
+
+  @override
+  Future<void> sendPasswordResetCode(String email) async {
+    final account = _backend.accountByEmail(email);
+    if (account != null) {
+      _backend.sendCode(account.email);
+    }
+  }
+
+  @override
+  Future<void> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async {
+    final account = _backend.accountByEmail(email);
+    if (account == null || !_backend.checkCode(account.email, code)) {
+      throw const AppFailure('Token has expired or is invalid');
+    }
+    final index = _backend.accounts.indexOf(account);
+    _backend.accounts[index] = MemoryAccount(
+      email: account.email,
+      password: newPassword,
+      profile: account.profile,
+    );
+    _backend.unconfirmed.remove(account.email);
+    _backend.setCurrentUser(account.profile.id);
   }
 
   @override
