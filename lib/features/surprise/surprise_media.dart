@@ -4,6 +4,8 @@ import 'package:video_player/video_player.dart';
 
 import '../../core/data/surprise_repository.dart';
 import '../../core/models/surprise.dart';
+import '../../core/services/link_preview_service.dart';
+import 'link_preview_card.dart';
 
 IconData mediaIcon(MediaKind? kind) => switch (kind) {
   MediaKind.image => Icons.photo_outlined,
@@ -137,31 +139,33 @@ class SurpriseMediaView extends StatelessWidget {
   }
 }
 
-/// Square preview for grids and the editor.
+/// Square preview for grids and the editor: the photo, the link's preview
+/// image, the message, or an icon.
 class SurpriseThumbnail extends StatelessWidget {
   const SurpriseThumbnail({
     super.key,
     required this.surprise,
     required this.repository,
+    required this.linkPreviews,
   });
 
   final Surprise surprise;
   final SurpriseRepository repository;
+  final LinkPreviewService linkPreviews;
 
   @override
   Widget build(BuildContext context) {
+    final link = surprise.link;
+    if (!surprise.hasMedia && link != null) {
+      return LinkThumbnail(url: Uri.parse(link), service: linkPreviews);
+    }
     if (surprise.mediaKind != MediaKind.image) {
       final scheme = Theme.of(context).colorScheme;
       return ColoredBox(
         color: scheme.surfaceContainerHighest,
         child: Center(
-          child: surprise.hasMedia || surprise.note.isEmpty
-              ? Icon(
-                  surprise.hasMedia
-                      ? mediaIcon(surprise.mediaKind)
-                      : Icons.link,
-                  size: 40,
-                )
+          child: surprise.hasMedia
+              ? Icon(mediaIcon(surprise.mediaKind), size: 40)
               : Padding(
                   padding: const EdgeInsets.all(12),
                   child: Text(

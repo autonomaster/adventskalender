@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../core/app_dependencies.dart';
 import '../core/data/auth_repository.dart';
+import '../core/models/advent.dart';
 import '../core/models/surprise.dart';
 import '../features/auth/sign_in_page.dart';
 import '../features/calendar/calendar_page.dart';
 import '../features/compose/compose_page.dart';
 import '../features/gallery/gallery_page.dart';
+import '../ui/riso.dart';
+import '../ui/riso_theme.dart';
 
 class AdventApp extends StatefulWidget {
   const AdventApp({super.key, this.dependencies});
@@ -33,20 +36,7 @@ class _AdventAppState extends State<AdventApp> {
     return MaterialApp(
       title: 'Carl & Mariana Adventskalender',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF8E1B2B),
-          primary: const Color(0xFF8E1B2B),
-          surface: const Color(0xFFFFFBF5),
-        ),
-        scaffoldBackgroundColor: const Color(0xFFFBF5EC),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFFFBF5EC),
-          foregroundColor: Color(0xFF3A1E1E),
-          elevation: 0,
-        ),
-        useMaterial3: true,
-      ),
+      theme: risoTheme(),
       home: FutureBuilder<AppDependencies>(
         future: _dependencies,
         builder: (context, snapshot) {
@@ -180,17 +170,19 @@ class _HomeShell extends StatefulWidget {
 class _HomeShellState extends State<_HomeShell> with WidgetsBindingObserver {
   int _selectedIndex = 0;
 
-  /// Bumped to reload received surprises (door opened, app resumed).
+  /// Bumped to reload all pages (door opened, app resumed, test date changed).
   int _revision = 0;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    widget.dependencies.clock.addListener(_onChanged);
   }
 
   @override
   void dispose() {
+    widget.dependencies.clock.removeListener(_onChanged);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -213,13 +205,32 @@ class _HomeShellState extends State<_HomeShell> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final couple = widget.couple;
     final titles = [
-      'From ${couple.partner.displayName}',
-      'For ${couple.partner.displayName}',
+      'My tree',
+      "${couple.partner.displayName}'s tree",
       'Gallery',
     ];
+    final testDate = widget.dependencies.clock.testDate;
     return Scaffold(
       appBar: AppBar(
         title: Text(titles[_selectedIndex]),
+        bottom: testDate == null
+            ? null
+            : PreferredSize(
+                preferredSize: const Size.fromHeight(30),
+                child: Container(
+                  height: 30,
+                  width: double.infinity,
+                  color: Riso.yellow,
+                  alignment: Alignment.center,
+                  child: Text(
+                    'Test date: ${formatDate(testDate)}',
+                    style: const TextStyle(
+                      color: Riso.ink,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
         actions: [
           PopupMenuButton<void>(
             tooltip: 'Account',

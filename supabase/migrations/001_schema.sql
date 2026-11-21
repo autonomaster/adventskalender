@@ -1,5 +1,6 @@
 -- Carl & Mariana Adventskalender: Supabase schema.
--- Run once in the Supabase dashboard: SQL Editor -> New query -> paste -> Run.
+-- Run every file in supabase/migrations once, in order, in the Supabase
+-- dashboard: SQL Editor -> New query -> paste -> Run.
 
 -- ---------------------------------------------------------------------------
 -- Profiles: one row per person, created automatically for every auth user.

@@ -1,10 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../../core/app_dependencies.dart';
 import '../../core/data/auth_repository.dart';
 import '../../core/data/surprise_repository.dart';
 import '../../core/models/advent.dart';
 import '../../core/models/surprise.dart';
 import '../../core/services/media_picker_service.dart';
+import '../../ui/pouch.dart';
+import '../surprise/link_preview_card.dart';
 import '../surprise/surprise_media.dart';
 
 /// Create, change, or delete the surprise behind one door for the partner.
@@ -14,15 +19,13 @@ class SurpriseEditorPage extends StatefulWidget {
     super.key,
     required this.day,
     required this.couple,
-    required this.repository,
-    required this.mediaPicker,
+    required this.dependencies,
     this.existing,
   });
 
   final DateTime day;
   final Couple couple;
-  final SurpriseRepository repository;
-  final MediaPickerService mediaPicker;
+  final AppDependencies dependencies;
   final Surprise? existing;
 
   @override
@@ -38,6 +41,13 @@ class _SurpriseEditorPageState extends State<SurpriseEditorPage> {
   String? _linkError;
   String? _error;
 
+  /// Link shown as a preview card; follows the link field with a delay.
+  Uri? _previewUrl;
+  Timer? _previewDebounce;
+
+  SurpriseRepository get _repository => widget.dependencies.surprises;
+  MediaPickerService get _mediaPicker => widget.dependencies.media;
+
   bool get _showsExistingMedia =>
       _newMedia == null &&
       _keepExisting &&
@@ -47,14 +57,35 @@ class _SurpriseEditorPageState extends State<SurpriseEditorPage> {
   void initState() {
     super.initState();
     _note = TextEditingController(text: widget.existing?.note ?? '');
-    _link = TextEditingController(text: widget.existing?.link ?? '');
+    _link = TextEditingController(text: widget.existing?.link ?? '')
+      ..addListener(_scheduleLinkPreview);
+    _previewUrl = _parsedLink();
   }
 
   @override
   void dispose() {
+    _previewDebounce?.cancel();
     _note.dispose();
     _link.dispose();
     super.dispose();
+  }
+
+  Uri? _parsedLink() {
+    try {
+      final link = normalizeLink(_link.text);
+      return link == null ? null : Uri.parse(link);
+    } on FormatException {
+      return null;
+    }
+  }
+
+  void _scheduleLinkPreview() {
+    _previewDebounce?.cancel();
+    _previewDebounce = Timer(const Duration(milliseconds: 700), () {
+      if (mounted) {
+        setState(() => _previewUrl = _parsedLink());
+      }
+    });
   }
 
   Future<void> _pick(Future<PickedMedia?> Function() picker) async {
@@ -109,7 +140,7 @@ class _SurpriseEditorPageState extends State<SurpriseEditorPage> {
       return;
     }
     await _run(
-      () => widget.repository.save(draft, existing: widget.existing),
+      () => _repository.save(draft, existing: widget.existing),
       failure: 'Saving failed',
     );
   }
@@ -137,7 +168,7 @@ class _SurpriseEditorPageState extends State<SurpriseEditorPage> {
     );
     if (confirmed == true) {
       await _run(
-        () => widget.repository.delete(widget.existing!),
+        () => _repository.delete(widget.existing!),
         failure: 'Deleting failed',
       );
     }
@@ -186,18 +217,45 @@ class _SurpriseEditorPageState extends State<SurpriseEditorPage> {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          Text(
-            '$partner can open this on ${formatAdventDay(widget.day)}.',
-            style: theme.textTheme.bodyMedium,
-          ),
-          if (widget.existing?.isOpened ?? false)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                '$partner has already opened it.',
-                style: theme.textTheme.bodySmall,
+          Row(
+            children: [
+              SizedBox(
+                width: 52,
+                height: 52 * pouchAspect,
+                child: CustomPaint(
+                  painter: PouchPainter(
+                    look: widget.existing == null
+                        ? PouchLook.add
+                        : widget.existing!.isOpened
+                        ? PouchLook.open
+                        : PouchLook.closed,
+                    number: widget.day.day,
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$partner can open this on '
+                      '${formatDate(widget.day)}.',
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                    if (widget.existing?.isOpened ?? false)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          '$partner has already opened it.',
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 20),
           _mediaSection(theme),
           const SizedBox(height: 20),
@@ -225,6 +283,13 @@ class _SurpriseEditorPageState extends State<SurpriseEditorPage> {
               errorText: _linkError,
             ),
           ),
+          if (_previewUrl != null) ...[
+            const SizedBox(height: 12),
+            LinkPreviewCard(
+              url: _previewUrl!,
+              service: widget.dependencies.linkPreviews,
+            ),
+          ],
           if (_error != null) ...[
             const SizedBox(height: 16),
             Text(_error!, style: TextStyle(color: theme.colorScheme.error)),
@@ -254,26 +319,22 @@ class _SurpriseEditorPageState extends State<SurpriseEditorPage> {
         runSpacing: 8,
         children: [
           OutlinedButton.icon(
-            onPressed: _busy
-                ? null
-                : () => _pick(widget.mediaPicker.pickFromGallery),
+            onPressed: _busy ? null : () => _pick(_mediaPicker.pickFromGallery),
             icon: const Icon(Icons.photo_library_outlined),
             label: const Text('Photo or video'),
           ),
           OutlinedButton.icon(
-            onPressed: _busy ? null : () => _pick(widget.mediaPicker.takePhoto),
+            onPressed: _busy ? null : () => _pick(_mediaPicker.takePhoto),
             icon: const Icon(Icons.photo_camera_outlined),
             label: const Text('Take photo'),
           ),
           OutlinedButton.icon(
-            onPressed: _busy
-                ? null
-                : () => _pick(widget.mediaPicker.recordVideo),
+            onPressed: _busy ? null : () => _pick(_mediaPicker.recordVideo),
             icon: const Icon(Icons.videocam_outlined),
             label: const Text('Record video'),
           ),
           OutlinedButton.icon(
-            onPressed: _busy ? null : () => _pick(widget.mediaPicker.pickFile),
+            onPressed: _busy ? null : () => _pick(_mediaPicker.pickFile),
             icon: const Icon(Icons.attach_file),
             label: const Text('Other file'),
           ),
@@ -295,7 +356,8 @@ class _SurpriseEditorPageState extends State<SurpriseEditorPage> {
       name = existing!.mediaName ?? 'Attached file';
       preview = SurpriseThumbnail(
         surprise: existing,
-        repository: widget.repository,
+        repository: _repository,
+        linkPreviews: widget.dependencies.linkPreviews,
       );
     }
     return Card(

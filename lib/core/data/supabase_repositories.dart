@@ -50,6 +50,13 @@ class SupabaseAuthRepository implements AuthRepository {
   }
 }
 
+/// The test date from `app_config` (see supabase/migrations), or null.
+Future<DateTime?> loadTestDate(SupabaseClient client) async {
+  final row = await client.from('app_config').select('test_date').maybeSingle();
+  final value = row?['test_date'] as String?;
+  return value == null ? null : DateTime.parse(value);
+}
+
 class SupabaseSurpriseRepository implements SurpriseRepository {
   SupabaseSurpriseRepository(this._client);
 
