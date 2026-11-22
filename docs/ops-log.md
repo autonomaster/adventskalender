@@ -16,6 +16,8 @@ account limit).
 
 | Date | Who | Where | What |
 |---|---|---|---|
+| 2026-11-22 | agent | GH | rulesets on `main`: "main: CI and history" (PR only, check `flutter`, no force push/deletion, no bypass) + "main: review" (1 approval, code owner, stale dismissal; admin bypass via PR) |
+| 2026-11-22 | agent | GH | repo visibility → public (commit author emails accepted as public by Carl) |
 | 2026-11-22 | agent | SB | snapshot of deliberately set auth settings committed as cfg |
 | 2026-11-22 | agent | NL | deploy `fix/test-findings` build (readable errors, duplicate sign-up msg) — before PR #4 merged |
 | 2026-11-22 | agent | SB | cfg: `disable_signup=false` (sign-ups open, email confirm on) |
