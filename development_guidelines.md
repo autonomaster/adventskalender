@@ -20,11 +20,12 @@ The repository is public. `main` is protected and must remain releasable.
 
 ### Owner (`@autonomaster`, including the coding agent working for him)
 
-- Feature branch → pull request → wait for green CI → merge yourself with
-  `gh pr merge <n> --merge --admin` (on github.com: tick "Merge without
-  waiting for requirements to be met"). No approval needed: the owner bypasses
-  the review ruleset only; the CI ruleset has no bypass, so a PR with pending
-  or failing CI cannot be merged even with `--admin`.
+- Feature branch → pull request → `gh pr checks <n>` shows `flutter` green →
+  merge yourself with `gh pr merge <n> --merge --admin`. No approval needed:
+  the owner bypasses the review ruleset only; the CI ruleset has no bypass,
+  so `--admin` cannot merge while the required check is not passing.
+- `--admin` is only for pull requests the owner authored. Never use it on a
+  contributor's pull request: approve it first, then merge normally.
 - Before merging any owner pull request, the agent hands the PR diff and its
   scope to a review subagent on a cheaper model than its own (currently
   Sonnet). The agent decides what is in scope: in-scope findings are fixed
