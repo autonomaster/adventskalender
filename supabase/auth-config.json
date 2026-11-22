@@ -1,0 +1,23 @@
+{
+  "site_url": "https://c-m-adventskalender.netlify.app",
+  "uri_allow_list": "https://c-m-adventskalender.netlify.app/**",
+  "disable_signup": false,
+  "external_email_enabled": true,
+  "mailer_autoconfirm": false,
+  "password_min_length": 8,
+  "mailer_otp_length": 6,
+  "mailer_otp_exp": 3600,
+  "rate_limit_email_sent": 30,
+  "hook_before_user_created_enabled": true,
+  "hook_before_user_created_uri": "pg-functions://postgres/public/hook_limit_signups",
+  "smtp_host": "smtp.gmail.com",
+  "smtp_port": "465",
+  "smtp_user": "${GMAIL_ADDRESS}",
+  "smtp_pass": "${GMAIL_APP_PASSWORD}",
+  "smtp_admin_email": "${GMAIL_ADDRESS}",
+  "smtp_sender_name": "Adventskalender",
+  "mailer_subjects_confirmation": "Dein Code / Your code: {{ .Token }}",
+  "mailer_templates_confirmation_content": "<div style=\"font-family:Arial,Helvetica,sans-serif;background:#F4EDE0;padding:28px;color:#233467\">\n<p style=\"font-size:20px;font-weight:bold;margin:0 0 16px\">&#127876; Adventskalender</p>\n<p>Dein Bestätigungscode für den Adventskalender:<br>Your Adventskalender confirmation code:</p><p style=\"font-size:34px;font-weight:bold;letter-spacing:8px;margin:8px 0 16px\">{{ .Token }}</p><p>Gib ihn in der App ein. / Enter it in the app.</p>\n<p style=\"font-size:12px;color:#5b6688;margin-top:24px\">Nicht angefordert? Dann ignoriere diese E-Mail.<br>Didn't ask for this? Just ignore this email.</p>\n</div>",
+  "mailer_subjects_recovery": "Passwort-Code / Password code: {{ .Token }}",
+  "mailer_templates_recovery_content": "<div style=\"font-family:Arial,Helvetica,sans-serif;background:#F4EDE0;padding:28px;color:#233467\">\n<p style=\"font-size:20px;font-weight:bold;margin:0 0 16px\">&#127876; Adventskalender</p>\n<p>Code zum Zurücksetzen deines Passworts:<br>Code to reset your password:</p><p style=\"font-size:34px;font-weight:bold;letter-spacing:8px;margin:8px 0 16px\">{{ .Token }}</p><p>Gib ihn zusammen mit dem neuen Passwort in der App ein.<br>Enter it in the app together with your new password.</p>\n<p style=\"font-size:12px;color:#5b6688;margin-top:24px\">Nicht angefordert? Dann ignoriere diese E-Mail.<br>Didn't ask for this? Just ignore this email.</p>\n</div>"
+}

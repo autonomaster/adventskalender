@@ -13,6 +13,7 @@ android/local.properties
 android/**/GeneratedPluginRegistrant.java
 *.jks
 *.keystore
+android/key.properties
 
 # iOS
 .dart_tool/

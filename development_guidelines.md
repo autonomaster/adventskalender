@@ -1,42 +1,82 @@
 # Development Guidelines
 
-## Branches
+The repository is public. `main` is protected and must remain releasable.
 
-- `main` is protected and must remain releasable.
-- Every implementation starts on a feature branch, for example `feature/daily-notifications`.
-- Do not commit implementation work directly to `main`.
-- Keep branches focused and reasonably short-lived.
+## Branches and pull requests
 
-## Pull requests
+- Every change goes through a branch and a pull request into `main`; direct
+  pushes, force pushes and deleting `main` are blocked. Only the very first
+  commit (the initial version of the project) went straight to `main`.
+- Name branches by purpose: `feature/…`, `fix/…`, `chore/…`. Keep them focused
+  and short-lived.
+- CI (`Flutter checks`) must be green before any merge. This applies to
+  everyone, including the owner.
 
-- Merge changes into `main` through a pull request.
-- CI must pass before merge.
-- At least one reviewer approval is required.
-- `@autonomaster` is the default reviewer and should be requested on every PR.
+### Contributors
+
+- Create a branch (or a fork) and open a pull request.
+- The code owner `@autonomaster` must approve it before it can be merged.
 - Resolve review comments before merging.
-- The author should not self-approve their own PR.
+
+### Owner (`@autonomaster`, including the coding agent working for him)
+
+- Feature branch → pull request → wait for green CI → merge yourself. No
+  approval needed (the owner bypasses the review rule, not the CI rule).
+- Before merging any owner pull request, the agent hands the PR diff and its
+  scope to a review subagent on a cheaper model than its own (currently
+  Sonnet). The agent decides what is in scope: in-scope findings are fixed
+  before merging; the rest is posted as a PR comment for later.
 
 ## Code and tests
 
 - Prefer the smallest maintainable change that completes the behavior.
 - Add or update tests for user-visible behavior and important state transitions.
-- Run formatting, analysis, and tests locally before opening a PR.
-- Do not commit secrets, signing keys, generated local configuration, or credentials.
-- Update relevant project documentation when behavior or setup changes.
+- Run `dart format`, `flutter analyze` and `flutter test` locally before
+  opening a pull request.
+- Update relevant documentation (README, this file) when behavior or setup
+  changes.
 
-## Required GitHub repository settings
+## Secrets and personal data
 
-The repository should protect `main` with:
+Never commit:
 
-- Pull request required before merging
-- At least one approving review
-- Code-owner review enabled
-- Required CI status checks
-- Force-push and branch deletion restrictions as appropriate
+- `.env` (API tokens, Gmail app password, test-account credentials) and
+  `supabase.json` (project URL and publishable key); both are git-ignored.
+- Passwords, tokens, signing keys, personal email addresses, real user data.
 
-The repository-level `.github/CODEOWNERS` file requests `@autonomaster` as the default code owner.
+Use placeholders like `${GMAIL_APP_PASSWORD}` where a value is needed in a
+committed file; [`.env.example`](.env.example) lists the variable names.
+Commits use the GitHub no-reply address
+(`git config user.email 337420157+autonomaster@users.noreply.github.com`).
 
-## Automation identity
+## Supabase and Netlify
 
-- Commit author identity and GitHub PR author identity are separate.
-- `@autonomaster` cannot approve their own PR; PRs opened by `@autonomaster` need another reviewer or an automation identity as author.
+- Change production only from merged `main`: run new migrations and deploy
+  `build/web` after the pull request is merged. Exceptions (urgent fixes,
+  tests) are allowed but are marked as such in the log.
+- Schema and policy changes: a new numbered file in `supabase/migrations/`,
+  never edit an applied one.
+- Auth settings (SMTP, templates, hooks, sign-up rules): update
+  `supabase/auth-config.json` in the same pull request. It pins the auth
+  settings this project relies on, with `${…}` placeholders for secrets. To
+  apply it, replace the placeholders with the values from `.env` (JSON-escaped),
+  check that no `${` is left, then send it as the body of
+  `PATCH https://api.supabase.com/v1/projects/<ref>/config/auth` with
+  `Authorization: Bearer $SUPABASE_ACCESS_TOKEN`. Apply migrations first: the
+  sign-up hook calls a function from `004_signup_limit.sql`.
+- Log every action on Supabase, Netlify or the GitHub repository settings in
+  [`docs/ops-log.md`](docs/ops-log.md), briefly (abbreviations and SQL
+  snippets are fine). No secrets in the log. Because `main` only changes via
+  pull requests: a row for a change caused by a PR goes into that PR; rows for
+  actions after a merge (deploys, settings, tests) are collected on a
+  `chore/ops-log` branch and merged as one small PR at the end of the session.
+
+## GitHub repository settings
+
+Two rulesets protect `main`:
+
+1. **main: CI and history** (no bypass): changes only via pull request,
+   required status check `flutter`, no force pushes, no deletion.
+2. **main: review** (bypass for repository admins, only via pull request):
+   one approving review, code-owner review (`.github/CODEOWNERS` →
+   `@autonomaster`), stale approvals dismissed on new commits.
