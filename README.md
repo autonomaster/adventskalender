@@ -111,6 +111,13 @@ provider plus a Supabase Edge Function; the mail-app button avoids both.
    API**), not the dashboard address. Copy `supabase.example.json` to
    `supabase.json` and fill in the values. `supabase.json` is ignored by git.
 
+Steps 3 to 6 are recorded in [`supabase/auth-config.json`](supabase/auth-config.json)
+(the settings this project changes, with `${…}` placeholders for the Gmail
+address and app password). It can be applied in one call instead of clicking:
+`PATCH https://api.supabase.com/v1/projects/<ref>/config/auth` with a personal
+access token, after substituting the placeholders. Every change to the live
+project is logged in [`docs/ops-log.md`](docs/ops-log.md).
+
 Accounts can also be created by hand under **Authentication → Users → Add user**
 (tick *Auto Confirm User*); they connect in the app like everyone else.
 
@@ -225,8 +232,9 @@ puro flutter analyze
 puro flutter test
 ```
 
-CI runs the same checks (`.github/workflows/flutter.yml`). Branch and review
-rules are in [`development_guidelines.md`](development_guidelines.md).
+CI runs the same checks (`.github/workflows/flutter.yml`). Branch, review,
+deployment and logging rules are in
+[`development_guidelines.md`](development_guidelines.md).
 
 Layout:
 
@@ -237,8 +245,21 @@ Layout:
 - `lib/features`: sign-in, my tree, partner's tree and editor, gallery,
   surprise popup
 - `supabase/migrations`: tables, grants, row-level security, storage bucket and
-  policies, test date
+  policies, test date, account limit
+- `supabase/auth-config.json`: auth settings (SMTP, email templates, hooks)
+- `docs/ops-log.md`: log of changes to Supabase, Netlify and GitHub settings
 
-Not built yet: push notifications when a new door opens or a partner fills a
-door. The app reloads when it comes back to the foreground, and every list
-supports pull-to-refresh.
+## TODO
+
+- **Behaviour tests in CI for the database rules.** Today CI only runs the
+  Flutter tests against the in-memory backend. The row-level security,
+  partner linking (`invite_partner`), storage policies and the account limit
+  were only checked with throwaway scripts and live test accounts. Add a CI
+  job that applies `supabase/migrations` to a throwaway Postgres (Supabase CLI
+  `supabase start` or PGlite) and asserts: strangers see nothing, only
+  mutual invitations link, linked people cannot switch partners or set their
+  test date, uploads only into the own folder and only when linked, sign-ups
+  stop at `max_accounts`.
+- Push notifications when a new door opens or a partner fills a door. Until
+  then the app reloads when it comes back to the foreground, and every list
+  supports pull-to-refresh.
