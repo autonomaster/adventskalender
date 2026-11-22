@@ -20,8 +20,11 @@ The repository is public. `main` is protected and must remain releasable.
 
 ### Owner (`@autonomaster`, including the coding agent working for him)
 
-- Feature branch → pull request → wait for green CI → merge yourself. No
-  approval needed (the owner bypasses the review rule, not the CI rule).
+- Feature branch → pull request → wait for green CI → merge yourself with
+  `gh pr merge <n> --merge --admin` (on github.com: tick "Merge without
+  waiting for requirements to be met"). No approval needed: the owner bypasses
+  the review ruleset only; the CI ruleset has no bypass, so a PR with pending
+  or failing CI cannot be merged even with `--admin`.
 - Before merging any owner pull request, the agent hands the PR diff and its
   scope to a review subagent on a cheaper model than its own (currently
   Sonnet). The agent decides what is in scope: in-scope findings are fixed
