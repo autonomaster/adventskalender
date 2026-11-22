@@ -22,10 +22,10 @@ The repository is public. `main` is protected and must remain releasable.
 
 - Feature branch → pull request → wait for green CI → merge yourself. No
   approval needed (the owner bypasses the review rule, not the CI rule).
-- Before merging, the agent has the pull request reviewed by a subagent on a
-  cheaper model (Sonnet), giving it the PR diff and its scope. Comments that
-  are relevant to the PR's scope are fixed before merging; anything else is
-  noted on the PR for later.
+- Before merging any owner pull request, the agent hands the PR diff and its
+  scope to a review subagent on a cheaper model than its own (currently
+  Sonnet). The agent decides what is in scope: in-scope findings are fixed
+  before merging; the rest is posted as a PR comment for later.
 
 ## Code and tests
 
@@ -45,25 +45,31 @@ Never commit:
 - Passwords, tokens, signing keys, personal email addresses, real user data.
 
 Use placeholders like `${GMAIL_APP_PASSWORD}` where a value is needed in a
-committed file. Commits should use the GitHub no-reply address
-(`git config user.email <id>+autonomaster@users.noreply.github.com`).
+committed file; [`.env.example`](.env.example) lists the variable names.
+Commits use the GitHub no-reply address
+(`git config user.email 337420157+autonomaster@users.noreply.github.com`).
 
 ## Supabase and Netlify
 
 - Change production only from merged `main`: run new migrations and deploy
   `build/web` after the pull request is merged. Exceptions (urgent fixes,
-  tests) are allowed but must say so in the log.
+  tests) are allowed but are marked as such in the log.
 - Schema and policy changes: a new numbered file in `supabase/migrations/`,
   never edit an applied one.
 - Auth settings (SMTP, templates, hooks, sign-up rules): update
-  `supabase/auth-config.json` in the same pull request. It holds exactly the
-  settings this project changes from Supabase's defaults, with placeholders
-  for secrets; it is applied with the Management API
-  (`PATCH /v1/projects/{ref}/config/auth`) after substituting values from
-  `.env`.
+  `supabase/auth-config.json` in the same pull request. It pins the auth
+  settings this project relies on, with `${…}` placeholders for secrets. To
+  apply it, replace the placeholders with the values from `.env` (JSON-escaped),
+  check that no `${` is left, then send it as the body of
+  `PATCH https://api.supabase.com/v1/projects/<ref>/config/auth` with
+  `Authorization: Bearer $SUPABASE_ACCESS_TOKEN`. Apply migrations first: the
+  sign-up hook calls a function from `004_signup_limit.sql`.
 - Log every action on Supabase, Netlify or the GitHub repository settings in
-  [`docs/ops-log.md`](docs/ops-log.md), in the same session, briefly
-  (abbreviations and SQL snippets are fine). No secrets in the log.
+  [`docs/ops-log.md`](docs/ops-log.md), briefly (abbreviations and SQL
+  snippets are fine). No secrets in the log. Because `main` only changes via
+  pull requests: a row for a change caused by a PR goes into that PR; rows for
+  actions after a merge (deploys, settings, tests) are collected on a
+  `chore/ops-log` branch and merged as one small PR at the end of the session.
 
 ## GitHub repository settings
 

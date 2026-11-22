@@ -99,7 +99,9 @@ provider plus a Supabase Edge Function; the mail-app button avoids both.
    Gmail (**Authentication → Emails → SMTP Settings**: host `smtp.gmail.com`,
    port 465, the Gmail address as user and sender, a Google
    [app password](https://myaccount.google.com/apppasswords) as password,
-   sender name "Adventskalender"). Gmail allows about 500 emails a day.
+   sender name "Adventskalender"). Gmail allows about 500 emails a day. The
+   address is shown to everyone who signs up; a dedicated Gmail account for
+   sending keeps your personal one private.
 5. **Authentication → Emails → Templates**: *Confirm signup* and *Reset
    password* show `{{ .Token }}` (the code) instead of a link.
 6. **Authentication → Sign In / Providers → Email**: *Allow new users to sign
@@ -255,11 +257,13 @@ Layout:
   Flutter tests against the in-memory backend. The row-level security,
   partner linking (`invite_partner`), storage policies and the account limit
   were only checked with throwaway scripts and live test accounts. Add a CI
-  job that applies `supabase/migrations` to a throwaway Postgres (Supabase CLI
-  `supabase start` or PGlite) and asserts: strangers see nothing, only
-  mutual invitations link, linked people cannot switch partners or set their
-  test date, uploads only into the own folder and only when linked, sign-ups
-  stop at `max_accounts`.
+  job that applies `supabase/migrations` to a throwaway Supabase stack
+  (`supabase start` from the Supabase CLI on the CI runner; plain Postgres or
+  PGlite would need stubs for the `auth` and `storage` schemas and roles) and
+  asserts: strangers see nothing, only mutual invitations link, linked people
+  cannot switch partners or set their test date, uploads only into the own
+  folder and only when linked, and `public.hook_limit_signups(jsonb)` (called
+  directly) refuses sign-ups at `max_accounts`.
 - Push notifications when a new door opens or a partner fills a door. Until
   then the app reloads when it comes back to the foreground, and every list
   supports pull-to-refresh.
